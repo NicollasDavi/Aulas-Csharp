@@ -1,38 +1,68 @@
+using Microsoft.AspNetCore.Mvc;
+using webApi.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
-using var client = new HttpClient();
 
-List<Produto> produtos = 
-[  
-    new Produto("Celular", "IOS"),
-    new Produto("Celular", "IOS"),
-    new Produto("Celular", "IOS"),
-    new Produto("Celular", "IOS")
-];
+List<Produto> produtos = new List<Produto>();
+    produtos.Add(new Produto("Celular", "IOS", 5000));
+    produtos.Add(new Produto("Celular", "Android", 4000));
+    produtos.Add(new Produto("Televisão", "LG", 2300.5));
+    produtos.Add(new Produto("Placa de Vídeo", "NVIDIA", 2500));
 
-app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/disgraca", () => produtos);
+app.MapGet("/", () => "API de Produtos");
 
-app.MapPost("/cadastro", () => produtos);
+app.MapGet("/produto/listar", () => produtos);
 
-// app.MapGet("/viacep/{cep}", async (HttpContext context) => {
-//         try
-//         {
-//             var cep = context.Request.RouteValues["cep"];
-//             var response = await client.GetAsync($"https://viacep.com.br/ws/{cep}/json/");
-//             var content = await response.Content.ReadAsStringAsync();
-//             return content; 
-//         }
-//         catch (Exception)
-//         {
-//             throw new Exception("sabe deus oq deu rapa");
-//         }
-        
-    
-// });
+app.MapGet("/produto/buscar/{nome}", ([FromRoute] string nome) =>
+    {
+        for (int i = 0; i < produtos.Count; i++)
+        {
+            if (produtos[i].Nome == nome)
+            {
+                return Results.Ok(produtos[i]);
+            }
+        }
+        return Results.NotFound("Produto não encontrado!");
+    }
+);
+
+app.MapPost("/produto/cadastrar", ([FromBody] Produto produto) =>
+{
+    produtos.Add(produto);
+    return Results.Created($"/produto/buscar/{produto.Nome}", produto); 
+});
+
+app.MapDelete("/produto/deletar/{nome}", (string nome) =>
+{
+    var produto = produtos.Find(p => p.Nome == nome);
+    if (produto == null)
+    {
+        return Results.NotFound("Produto não encontrado!");
+    }
+
+    produtos.Remove(produto);
+    return Results.Ok("Produto deletado com sucesso!");
+});
+
+app.MapPut("/produtos/atualizar/{nome}", (string nome, Produto novoProduto) =>
+{
+    var produto = produtos.Find(p => p.Nome == nome);
+    if (produto == null)
+    {
+        return Results.NotFound("Produto não encontrado!");
+    }
+
+
+    produto.Nome = novoProduto.Nome ?? produto.Nome;
+    produto.Descricao = novoProduto.Descricao ?? produto.Descricao;
+    produto.Valor = novoProduto.Valor != 0 ? novoProduto.Valor : produto.Valor;
+
+    return Results.Ok("Produto atualizado com sucesso!");
+});
+
+
+;
 
 app.Run();
-
-
-record Produto(string nome, string desc);
